@@ -90,11 +90,12 @@ class NBodyProblem(private val moons: List<Moon>) {
 
 fun main() {
     val moons = listOf(
-            Moon(-16, 15, -9),
-            Moon(-14, 5, 4),
-            Moon(2, 0, 6),
-            Moon(-3, 18, 9)
+            Moon(-2, 9, -5),
+            Moon(16, 19, 9),
+            Moon(0, 3, 6),
+            Moon(11, 0, 11)
     )
     val nbp = NBodyProblem(moons)
+    println(nbp.move(1000))
     println(nbp.meet())
 }
