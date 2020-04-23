@@ -7,6 +7,8 @@ enum class Direction {
 }
 
 /*
+WIP: Refactor
+
 sealed class Direction {
     object N : Direction()
     object E : Direction()
