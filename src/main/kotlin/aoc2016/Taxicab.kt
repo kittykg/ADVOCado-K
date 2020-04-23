@@ -6,6 +6,33 @@ enum class Direction {
     N, E, S, W
 }
 
+/*
+sealed class Direction {
+    object N : Direction()
+    object E : Direction()
+    object S : Direction()
+    object W : Direction()
+
+    companion object
+
+    fun parse(c: Char): Direction? {
+        return when (c) {
+            'N' -> N
+            'E' -> E
+            'S' -> S
+            'W' -> W
+            else -> null
+        }
+    }
+}
+
+data class Coordinate(val x: Int, val y: Int)
+
+data class State(val coord: Coordinate, val face: Direction)
+
+data class Instruction(val direction: Direction, val step: Int)
+*/
+
 class Taxicab(private val input: String) {
     private fun processInput(): List<String> {
         return input.split(", ")
