@@ -61,10 +61,16 @@ data class Instruction(val opCode: FunkyOpCode, val mode1: Mode, val mode2: Mode
     }
 }
 
-data class State(val machine: List<Int>, val pointer: Int)
+data class State(
+        val machine: List<Int>,
+        val pointer: Int,
+        val inputCodes: List<Int>,
+        val output: List<Int>,
+        val ioBlocked: Boolean,
+        val isTerminated: Boolean
+)
 
-class Parser(private val inputCode: Int) {
-
+class Parser {
     private fun binaryOp(instruction: Instruction, state: State): State {
         val currPointer = state.pointer
         val machine = state.machine
@@ -88,7 +94,7 @@ class Parser(private val inputCode: Int) {
 
         val newMachine = machine.mapIndexed { i, code -> if (i == p3) res else code } +
                 (if (p3 == machine.size) listOf(res) else listOf())
-        return State(newMachine, currPointer + 4)
+        return state.copy(machine = newMachine, pointer = currPointer + 4)
     }
 
     private fun ioOp(instruction: Instruction, state: State): State {
@@ -97,19 +103,22 @@ class Parser(private val inputCode: Int) {
 
         val p1 = machine[currPointer + 1]
 
-        val newMachine = if (instruction.opCode is FunkyOpCode.IoOp.IN) {
-            if (p1 > machine.size) throw UnsupportedOperationException("Bad place to add new yo, " +
-                "machine size ${machine.size}, p1 $p1")
-            val res = inputCode
-            machine.mapIndexed { i, code -> if (i == p1) res else code } +
+        return if (instruction.opCode is FunkyOpCode.IoOp.IN) {
+            if (p1 > machine.size) throw UnsupportedOperationException("Bad place to add new yo")
+
+            val inputCodes = state.inputCodes
+            if (inputCodes.isEmpty()) return state.copy(ioBlocked = true)
+
+            val res = inputCodes[0]
+            val newMachine = machine.mapIndexed { i, code -> if (i == p1) res else code } +
                     (if (p1 == machine.size) listOf(res) else listOf())
+            state.copy(machine = newMachine, pointer = currPointer + 2,
+                    inputCodes = inputCodes.drop(1))
         } else {
             val out = if (instruction.mode1 is Mode.POS) machine[p1] else p1
-            println(out)
-            machine
+            val newOutput = state.output + listOf(out)
+            state.copy(pointer = currPointer + 2, output = newOutput)
         }
-
-        return State(newMachine, currPointer + 2)
     }
 
     private fun condOp(instruction: Instruction, state: State): State {
@@ -126,14 +135,15 @@ class Parser(private val inputCode: Int) {
         else if (para1 == 0 && instruction.opCode is FunkyOpCode.ConditionOp.JIF) para2
         else currentPointer + 3
 
-        return State(machine, newPointer)
+        return state.copy(pointer = newPointer)
     }
 
     tailrec fun parse(state: State): State {
         val machine = state.machine
         val currPointer = state.pointer
 
-        if (currPointer >= machine.size) return State(machine, currPointer)
+        if (state.ioBlocked) return state
+        if (state.isTerminated) return state
 
         val instruction = Instruction.parseInstruction(machine[currPointer])
 
@@ -141,20 +151,22 @@ class Parser(private val inputCode: Int) {
             is FunkyOpCode.BinaryOp -> parse(binaryOp(instruction, state))
             is FunkyOpCode.IoOp -> parse(ioOp(instruction, state))
             is FunkyOpCode.ConditionOp -> parse(condOp(instruction, state))
-            is FunkyOpCode.NINENINE -> State(machine, currPointer)
+            is FunkyOpCode.NINENINE -> state.copy(isTerminated = true)
         }
     }
 
 }
 
 object FunkyPuter {
-    fun run(input: String, inputCode: Int) {
-        val machine = input.split(",").map { it.toInt() }
-        Parser(inputCode).parse(State(machine, 0))
-    }
+    fun runOnState(input: State): State = Parser().parse(input)
+
+    fun runAndShowLastOutput(input: String, inputCodes: List<Int>): Int = Parser().parse(
+            State(input.split(",").map { it.toInt() }, 0,
+                    inputCodes, listOf(), ioBlocked = false, isTerminated = false))
+            .output.last()
 }
 
 fun main() {
     val input = "3,225,1,225,6,6,1100,1,238,225,104,0,1101,34,7,225,101,17,169,224,1001,224,-92,224,4,224,1002,223,8,223,1001,224,6,224,1,224,223,223,1102,46,28,225,1102,66,83,225,2,174,143,224,1001,224,-3280,224,4,224,1002,223,8,223,1001,224,2,224,1,224,223,223,1101,19,83,224,101,-102,224,224,4,224,102,8,223,223,101,5,224,224,1,223,224,223,1001,114,17,224,1001,224,-63,224,4,224,1002,223,8,223,1001,224,3,224,1,223,224,223,1102,60,46,225,1101,7,44,225,1002,40,64,224,1001,224,-1792,224,4,224,102,8,223,223,101,4,224,224,1,223,224,223,1101,80,27,225,1,118,44,224,101,-127,224,224,4,224,102,8,223,223,101,5,224,224,1,223,224,223,1102,75,82,225,1101,40,41,225,1102,22,61,224,1001,224,-1342,224,4,224,102,8,223,223,1001,224,6,224,1,223,224,223,102,73,14,224,1001,224,-511,224,4,224,1002,223,8,223,101,5,224,224,1,224,223,223,4,223,99,0,0,0,677,0,0,0,0,0,0,0,0,0,0,0,1105,0,99999,1105,227,247,1105,1,99999,1005,227,99999,1005,0,256,1105,1,99999,1106,227,99999,1106,0,265,1105,1,99999,1006,0,99999,1006,227,274,1105,1,99999,1105,1,280,1105,1,99999,1,225,225,225,1101,294,0,0,105,1,0,1105,1,99999,1106,0,300,1105,1,99999,1,225,225,225,1101,314,0,0,106,0,0,1105,1,99999,1008,677,677,224,1002,223,2,223,1006,224,329,1001,223,1,223,1007,226,226,224,1002,223,2,223,1005,224,344,101,1,223,223,1008,226,226,224,1002,223,2,223,1006,224,359,101,1,223,223,8,226,677,224,102,2,223,223,1006,224,374,101,1,223,223,1107,677,226,224,1002,223,2,223,1005,224,389,101,1,223,223,1008,677,226,224,102,2,223,223,1006,224,404,1001,223,1,223,1108,677,677,224,102,2,223,223,1005,224,419,1001,223,1,223,1107,677,677,224,102,2,223,223,1006,224,434,1001,223,1,223,1108,226,677,224,1002,223,2,223,1006,224,449,101,1,223,223,8,677,226,224,1002,223,2,223,1005,224,464,101,1,223,223,108,226,677,224,102,2,223,223,1005,224,479,1001,223,1,223,1107,226,677,224,102,2,223,223,1005,224,494,101,1,223,223,108,677,677,224,1002,223,2,223,1005,224,509,1001,223,1,223,7,677,226,224,1002,223,2,223,1006,224,524,101,1,223,223,1007,677,677,224,1002,223,2,223,1006,224,539,1001,223,1,223,107,226,226,224,102,2,223,223,1006,224,554,101,1,223,223,107,677,677,224,102,2,223,223,1006,224,569,1001,223,1,223,1007,226,677,224,1002,223,2,223,1006,224,584,101,1,223,223,108,226,226,224,102,2,223,223,1006,224,599,1001,223,1,223,7,226,226,224,102,2,223,223,1006,224,614,1001,223,1,223,8,226,226,224,1002,223,2,223,1006,224,629,1001,223,1,223,7,226,677,224,1002,223,2,223,1005,224,644,101,1,223,223,1108,677,226,224,102,2,223,223,1006,224,659,101,1,223,223,107,226,677,224,102,2,223,223,1006,224,674,1001,223,1,223,4,223,99,226"
-    FunkyPuter.run(input, 5)
+    println(FunkyPuter.runAndShowLastOutput(input, listOf(5)))
 }
