@@ -1,5 +1,7 @@
 package aoc2019
 
+import java.math.BigInteger
+
 fun List<Int>.permutations(): Set<List<Int>> = when {
     isEmpty() -> setOf()
     size == 1 -> setOf(this)
@@ -12,15 +14,15 @@ fun List<Int>.permutations(): Set<List<Int>> = when {
 }
 
 object TrialMachine {
-    private fun trial(input: String, phases: List<Int>): Int =
-            phases.fold(0) { acc: Int, i: Int ->
-                FunkyPuter.runAndShowLastOutput(input, listOf(i, acc))
+    private fun trial(input: String, phases: List<Int>): BigInteger =
+            phases.fold(BigInteger.ZERO) { acc, i ->
+                FunkyPuter.runAndShowLastOutput(input, listOf(i.toBigInteger(), acc))
             }
 
     fun findMaxThruster(input: String) =
             (0..4).toList().permutations().toList().map { trial(input, it) }.max()
 
-    private tailrec fun loop(states: List<State>): Int {
+    private tailrec fun loop(states: List<State>): BigInteger {
         if (states.all { it.isTerminated }) return states.last().output.last()
 
         val newStates = states.indices.fold(states) { acc: List<State>, i: Int ->
@@ -30,8 +32,8 @@ object TrialMachine {
 
             val newInputCodes = ampLastState.inputCodes + (if (prevAmpState.output.isEmpty())
                 listOf() else listOf(prevAmpState.output.last()))
-            val newState = State(ampLastState.machine, ampLastState.pointer,
-                    newInputCodes, ampLastState.output, ioBlocked = false, isTerminated = false)
+            val newState = ampLastState.copy(inputCodes = newInputCodes, ioBlocked = false,
+                    isTerminated = false)
             acc.mapIndexed { index: Int, s: State ->
                 if (index == i) FunkyPuter.runOnState(newState) else s
             }
@@ -39,13 +41,14 @@ object TrialMachine {
         return loop(newStates)
     }
 
-    fun loopMaxThruster(input: String): Int? {
-        val initMachine = input.split(",").map { it.toInt() }
+    fun loopMaxThruster(input: String): BigInteger? {
+        val initMachine = input.split(",").map { it.toBigInteger() }
 
         return (5..9).toList().permutations().toList().map { phases ->
             val initStates = phases.mapIndexed { index: Int, i: Int ->
-                val inputCodes = if (index == 0) listOf(i, 0) else listOf(i)
-                State(initMachine, 0, inputCodes, listOf(),
+                val inputCodes = if (index == 0) listOf(i.toBigInteger(), BigInteger.ZERO) else
+                    listOf(i.toBigInteger())
+                State(initMachine, 0, 0, inputCodes, listOf(),
                         ioBlocked = false, isTerminated = false)
             }
             loop(initStates)
