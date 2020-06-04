@@ -213,9 +213,12 @@ class Parser {
 }
 
 object FunkyPuter {
-    fun runOnInput(input: String, inputCodes: List<BigInteger> = listOf()) = Parser().parse(
-            State(input.split(",").map { it.toBigInteger() }, 0, 0,
-                    inputCodes, listOf(), ioBlocked = false, isTerminated = false))
+    fun initialise(input: String, inputCodes: List<BigInteger>): State = State(
+            input.split(",").map { it.toBigInteger() }, 0, 0,
+            inputCodes, listOf(), ioBlocked = false, isTerminated = false)
+
+    fun runOnInput(input: String, inputCodes: List<BigInteger> = listOf()): State =
+            Parser().parse(initialise(input, inputCodes))
 
     fun runOnState(input: State): State = Parser().parse(input)
 
