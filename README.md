@@ -1,6 +1,6 @@
-# ADVOCado
+# ADVOCado-K
 
-ADVent Of Code through the placement
+ADVent Of Code through the placement with Kotlin.
 
 ## Current state
 
@@ -21,3 +21,6 @@ ADVent Of Code through the placement
 |      | Day 09 |
 |      | Day 11 |
 |      | Day 12 |
+
+For 2020 onwards, it would be done in https://github.com/kittykg/ADVOCadO, 
+with some funky languages like Prolog? ;)
